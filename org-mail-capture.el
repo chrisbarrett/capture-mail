@@ -41,6 +41,14 @@
   "Contains all the parsers and handlers.
 Each element is a list of (TYPE PARSER HANDLER).")
 
+(defun omc--validate-parser-spec (plist)
+  "Assert that PLIST is a well-formed parser specification."
+  (cl-assert (plist-get plist :type))
+  (cl-assert (plist-get plist :parser))
+  (cl-assert (functionp (plist-get plist :parser)))
+  (cl-assert (plist-get plist :handler))
+  (cl-assert (functionp (plist-get plist :handler))))
+
 (defun omc--run-parsers (message parsers)
   "Run each parser over the given message until one succeeds.
 Return a cons of the type and the parsed value.
@@ -48,11 +56,7 @@ Return a cons of the type and the parsed value.
 MESSAGE is a plist of ([HEADERS...] BODY), where body is a string.
 
 PARSERS is a plist of (TYPE PARSER HANDLER)."
-  (cl-assert (--all? (plist-get it :type) parsers))
-  (cl-assert (--all? (plist-get it :parser) parsers))
-  (cl-assert (--all? (functionp (plist-get it :parser)) parsers))
-  (cl-assert (--all? (plist-get it :handler) parsers))
-  (cl-assert (--all? (functionp (plist-get it :handler)) parsers))
+  (-each parsers 'omc--validate-parser-spec)
   (cl-loop for p in parsers do
            (cl-destructuring-bind (&key type parser handler) p
              (-when-let (parsed-val (funcall parser message))
