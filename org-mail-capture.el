@@ -22,11 +22,61 @@
 
 ;;; Commentary:
 
-;; Capture tasks and diary entries from mail
+;; Defines utilities for parsing emails in your maildir and capturing them with
+;; org-mode.
 
 ;;; Code:
 
+(require 'dash)
+(require 'cl-lib)
 
+(defgroup org-mail-capture nil
+  "Utilities for capturing emails with org-mode."
+  :group 'org
+  :prefix "omc--")
+
+;; --------------------------- Internal -----------------------------------------
+
+(defvar omc--parsers nil
+  "Contains all the parsers and handlers.
+Each element is a list of (TYPE PARSER HANDLER).")
+
+(defun omc--run-parsers (message parsers)
+  "Run each parser over the given message until one succeeds.
+Return a cons of the type and the parsed value.
+
+MESSAGE is a plist of ([HEADERS...] BODY), where body is a string.
+
+PARSERS is a plist of (TYPE PARSER HANDLER)."
+  (cl-assert (--all? (plist-get it :type) parsers))
+  (cl-assert (--all? (plist-get it :parser) parsers))
+  (cl-assert (--all? (functionp (plist-get it :parser)) parsers))
+  (cl-assert (--all? (plist-get it :handler) parsers))
+  (cl-assert (--all? (functionp (plist-get it :handler)) parsers))
+  (cl-loop for p in parsers do
+           (cl-destructuring-bind (&key type parser handler) p
+             (-when-let (parsed-val (funcall parser message))
+               (cl-return (cons type (funcall handler parsed-val)))))))
+
+;; ------------------------- Public Interface ----------------------------------
+
+(cl-defun omc-declare-message-parser (type &key parser handler)
+  "Declare a maildir message parser.
+
+TYPE is a symbol that identifies the type of the parsed message.
+
+PARSER is a function that takes a plist of ([HEADERS...] BODY).
+It should return the value needed by the HANDLER command if
+parsing succeeds, or nil if parsing fails.
+
+HANDLER is a command that takes a value returned by the parser
+and performs an arbitrary action."
+  (declare (indent 1))
+  (cl-assert (symbolp type))
+  (cl-assert (and parser (functionp parser)))
+  (cl-assert (and handler (functionp handler)))
+  (setq omc--parsers (--remove (equal type (car it)) omc--parsers))
+  (add-to-list 'omc--parsers (list type parser handler)))
 
 (provide 'org-mail-capture)
 
