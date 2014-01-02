@@ -51,6 +51,13 @@
                           (:type c :parser identity :handler identity)))
     (should (equal 'b type))))
 
+(ert-deftest parses-message-to-alist ()
+  (should (equal '((body . "hello")
+                   (from . "Jane")
+                   (to . "Joe"))
+                 (omc--message->alist
+                  "From: Jane\nTo: Joe\n\nhello"))))
+
 (provide 'org-mail-capture-tests)
 
 ;;; org-mail-capture-tests.el ends here

@@ -28,6 +28,7 @@
 ;;; Code:
 
 (require 'dash)
+(require 's)
 (require 'cl-lib)
 
 (defgroup org-mail-capture nil
@@ -41,6 +42,61 @@
   "Contains all the parsers and handlers.
 Each element is a list of (TYPE PARSER HANDLER).")
 
+;;; Message parsing
+
+(defun omc--message-header-value (header msg)
+  (cadr (s-match (eval `(rx bol ,header ":" (* space) (group (* nonl)))) msg)))
+
+(defun omc--multipart-message? (msg)
+  (-when-let (s (omc--message-header-value "content-type" msg))
+    (s-matches? "multipart/alternative" s)))
+
+(defun omc--split-message-head-and-body (msg)
+  (let ((eoh (s-index-of "\n\n" msg)))
+    (cons (substring-no-properties (substring msg 0 eoh))
+          (substring-no-properties (substring msg eoh)))))
+
+(defun omc--multipart-body-plaintext-section (msg)
+  (cl-destructuring-bind (head . body) (omc--split-message-head-and-body msg)
+    (->> body
+      ;; Split the body by the boundary specified in the header and select
+      ;; the section with plaintext MIME encoding.
+      (s-split (cadr (s-match (rx "boundary=" (group (* nonl))) head)))
+      (-first (~ s-contains? "text/plain"))
+      ;; Tidy the section, dropping headers.
+      s-trim
+      (s-chop-suffix "--")
+      (s-split "\n\n")
+      cadr
+      s-trim
+      (s-chop-suffix "=")
+      ;; Convert latin-1 line breaks.
+      (s-replace "=\n" "")
+      ;; (s-replace "=0A" "")
+      )))
+
+(defun omc--message-header->alist (hd)
+  "Parse the given message header HD to an alist representation."
+  (->> hd
+    (s-match-strings-all (rx bol
+                             (group (+? (not (any space)))) ":" (* space)
+                             (group (+? anything)) (* (or ";" space)) eol))
+    (--map
+     (cl-destructuring-bind (_ key val) it
+       (cons (intern (s-downcase key))
+             (substring-no-properties val))))))
+
+(defun omc--message->alist (message-str)
+  "Convert the MESSAGE-STR as a string to an alist."
+  (let* ((head-and-bod (omc--split-message-head-and-body message-str))
+         (body (s-trim (if (omc--multipart-message? message-str)
+                           (omc--multipart-body-plaintext-section message-str)
+                         (cdr head-and-bod)))))
+    (cons (cons 'body body)
+          (omc--message-header->alist (car head-and-bod)))))
+
+;;; Run parsers
+
 (defun omc--validate-parser-spec (plist)
   "Assert that PLIST is a well-formed parser specification."
   (cl-assert (plist-get plist :type))
@@ -53,9 +109,9 @@ Each element is a list of (TYPE PARSER HANDLER).")
   "Run each parser over the given message until one succeeds.
 Return a cons of the type and the parsed value.
 
-MESSAGE is a plist of ([HEADERS...] BODY), where body is a string.
+MESSAGE is an alist of ([HEADERS...] BODY).
 
-PARSERS is a plist of (TYPE PARSER HANDLER)."
+PARSERS is an alist of (TYPE PARSER HANDLER)."
   (-each parsers 'omc--validate-parser-spec)
   (cl-loop for p in parsers do
            (cl-destructuring-bind (&key type parser handler) p
@@ -69,7 +125,7 @@ PARSERS is a plist of (TYPE PARSER HANDLER)."
 
 TYPE is a symbol that identifies the type of the parsed message.
 
-PARSER is a function that takes a plist of ([HEADERS...] BODY).
+PARSER is a function that takes an alist of ([HEADERS...] BODY).
 It should return the value needed by the HANDLER command if
 parsing succeeds, or nil if parsing fails.
 
@@ -80,9 +136,10 @@ and performs an arbitrary action."
   (cl-assert (and parser (functionp parser)))
   (cl-assert (and handler (functionp handler)))
   (setq omc--parsers (--remove (equal type (car it)) omc--parsers))
-  (add-to-list 'omc--parsers (list :type type
-                                   :parser parser
-                                   :handler handler)))
+  (add-to-list 'omc--parsers
+               (list :type type
+                     :parser parser
+                     :handler handler)))
 
 (provide 'org-mail-capture)
 
