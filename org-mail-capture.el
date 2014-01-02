@@ -80,7 +80,9 @@ and performs an arbitrary action."
   (cl-assert (and parser (functionp parser)))
   (cl-assert (and handler (functionp handler)))
   (setq omc--parsers (--remove (equal type (car it)) omc--parsers))
-  (add-to-list 'omc--parsers (list type parser handler)))
+  (add-to-list 'omc--parsers (list :type type
+                                   :parser parser
+                                   :handler handler)))
 
 (provide 'org-mail-capture)
 
