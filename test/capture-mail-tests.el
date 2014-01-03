@@ -1,4 +1,4 @@
-;;; org-mail-capture-tests.el --- Tests for org-mail-capture.el
+;;; capture-mail-tests.el --- Tests for capture-mail.el
 
 ;; Copyright (C) 2013 Chris Barrett
 
@@ -21,7 +21,7 @@
 
 ;;; Commentary:
 
-;; Tests for org-mail-capture.el
+;; Tests for capture-mail.el
 
 ;;; Code:
 
@@ -31,35 +31,35 @@
 
 (ert-deftest successful-parse-has-type-in-car ()
   (cl-destructuring-bind (type . _)
-      (omc--run-parsers example-message
-                        '((:type success
-                                 :parser (lambda (msg) t)
-                                 :handler (lambda (it) t))))
+      (cm--run-parsers example-message
+                       '((:type success
+                                :parser (lambda (msg) t)
+                                :handler (lambda (it) t))))
     (should (equal 'success type))))
 
 (ert-deftest successful-parse-has-result-in-cdr ()
   (cl-destructuring-bind (_ . parsed)
-      (omc--run-parsers example-message
-                        '((:type type
-                                 :parser (lambda (msg) (cdr (assoc 'body msg)))
-                                 :handler identity)))
+      (cm--run-parsers example-message
+                       '((:type type
+                                :parser (lambda (msg) (cdr (assoc 'body msg)))
+                                :handler identity)))
     (should (equal "Body" parsed))))
 
 (ert-deftest returns-first-successful-parse-result ()
   (cl-destructuring-bind (type . _)
-      (omc--run-parsers example-message
-                        '((:type a :parser (lambda (_) nil) :handler identity)
-                          (:type b :parser identity :handler identity)
-                          (:type c :parser identity :handler identity)))
+      (cm--run-parsers example-message
+                       '((:type a :parser (lambda (_) nil) :handler identity)
+                         (:type b :parser identity :handler identity)
+                         (:type c :parser identity :handler identity)))
     (should (equal 'b type))))
 
 (ert-deftest parses-message-to-alist ()
   (should (equal '((body . "hello")
                    (from . "Jane")
                    (to . "Joe"))
-                 (omc--message->alist
+                 (cm--message->alist
                   "From: Jane\nTo: Joe\n\nhello"))))
 
-(provide 'org-mail-capture-tests)
+(provide 'capture-mail-tests)
 
-;;; org-mail-capture-tests.el ends here
+;;; capture-mail-tests.el ends here

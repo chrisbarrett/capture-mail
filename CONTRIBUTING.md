@@ -24,8 +24,8 @@ repository. Follow the guidelines below to make sure everything goes smoothly.
 
 ### Naming
 
-- Use a `org-mail-capture-` prefix for all public names.
-- Use a `org-mail-capture--` prefix for all internal names.
+- Use a `cm-` prefix for all public names.
+- Use a `cm--` prefix for all internal names.
 
 ### Docstrings
 

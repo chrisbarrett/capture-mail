@@ -1,7 +1,7 @@
 (source melpa)
 (source org)
 
-(package-file "org-mail-capture.el")
+(package-file "capture-mail.el")
 
 (development
  (depends-on "flycheck-cask")

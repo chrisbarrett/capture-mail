@@ -1,14 +1,14 @@
-#+TITLE: org-mail-capture
+#+TITLE: capture-mail
 #+SUBTITLE: __TODO__
 #+AUTHOR: Chris Barrett
-#+TEXINFO_FILENAME: org-mail-capture.info
-#+TEXINFO_HEADER: The org-mail-capture manual
+#+TEXINFO_FILENAME: capture-mail.info
+#+TEXINFO_HEADER: The capture-mail manual
 #+TEXINFO_DIR_CATEGORY: Emacs
-#+TEXINFO_DIR_TITLE: org-mail-capture
+#+TEXINFO_DIR_TITLE: capture-mail
 #+TEXINFO_DIR_DESC: __TODO__
 
 * README                                                           :noexport:
-This file is used to generate the info manual for Skeletor. It will be
+This file is used to generate the info manual for capture-mail. It will be
 automatically built by the `doc` task in the makefile. This requires org-mode
 8.0 or later for the texinfo exporter.
 

@@ -15,11 +15,11 @@ USER_ELPA_D  = $(USER_EMACS_D)/elpa
 SRCS         = $(filter-out %-pkg.el, $(wildcard *.el))
 TESTS        = $(filter-out %-pkg.el, $(wildcard test/*.el))
 OBJECTS      = $(SRCS:.el=.elc)
-DOC_ORG      = $(DOC)/org-mail-capture.org
-DOC_TEXI     = $(DOC)/org-mail-capture.texi
-INFO_MANUAL  = $(DOC)/org-mail-capture.info
-PACKAGE_SRCS = $(SRCS) org-mail-capture-pkg.el $(INFO_MANUAL)
-PACKAGE_TAR  = org-mail-capture-$(VERSION).tar
+DOC_ORG      = $(DOC)/capture-mail.org
+DOC_TEXI     = $(DOC)/capture-mail.texi
+INFO_MANUAL  = $(DOC)/capture-mail.info
+PACKAGE_SRCS = $(SRCS) capture-mail-pkg.el $(INFO_MANUAL)
+PACKAGE_TAR  = capture-mail-$(VERSION).tar
 
 PRECOMMIT_SRC  = $(SCRIPT)/pre-commit.sh
 PRECOMMIT_HOOK = $(GIT_DIR)/hooks/pre-commit
@@ -66,11 +66,11 @@ $(PKG_DIR) : Cask
 .PHONY: dist
 dist : $(PACKAGE_TAR)
 $(PACKAGE_TAR) : $(PACKAGE_SRCS)
-	rm -rf org-mail-capture-$(VERSION)
-	mkdir -p org-mail-capture-$(VERSION)
-	cp -f $(PACKAGE_SRCS) org-mail-capture-$(VERSION)
-	tar cf $(PACKAGE_TAR) org-mail-capture-$(VERSION)
-	rm -rf org-mail-capture-$(VERSION)
+	rm -rf capture-mail-$(VERSION)
+	mkdir -p capture-mail-$(VERSION)
+	cp -f $(PACKAGE_SRCS) capture-mail-$(VERSION)
+	tar cf $(PACKAGE_TAR) capture-mail-$(VERSION)
+	rm -rf capture-mail-$(VERSION)
 
 # Install elisp packages with cask.
 .PHONY: packages
@@ -95,7 +95,7 @@ clean-all : clean clean-pkgdir
 .PHONY: clean
 clean : $(clean-doc)
 	rm -f $(OBJECTS)
-	rm -rf org-mail-capture-*.tar org-mail-capture-pkg.el
+	rm -rf capture-mail-*.tar capture-mail-pkg.el
 	rm -f $(DOC_TEXI)
 	rm -f $(INFO_MANUAL)
 
@@ -106,7 +106,7 @@ clean-pkgdir :
 
 # Generate files.
 
-org-mail-capture-pkg.el : Cask
+capture-mail-pkg.el : Cask
 	$(CASK) package
 
 %.elc : %.el $(PKG_DIR)

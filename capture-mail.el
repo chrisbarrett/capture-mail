@@ -1,4 +1,4 @@
-;;; org-mail-capture.el --- Capture tasks and diary entries from mail
+;;; capture-mail.el --- Capture tasks and diary entries from mail
 
 ;; Copyright (C) 2014 Chris Barrett
 
@@ -25,13 +25,13 @@
 ;; Defines utilities for parsing emails in your maildir and capturing them with
 ;; org-mode.
 ;;
-;; The `org-mail-capture' command will prompt you for a directory to import. You
+;; The `capture-mail' command will prompt you for a directory to import. You
 ;; might like to run this on a timer to continually capture items, e.g.
 ;;
 ;;   (run-with-timer 2 60
-;;     (lambda () (org-mail-capture "~/Maildir/my-account/dir/new")))
+;;     (lambda () (capture-mail "~/Maildir/my-account/dir/new")))
 ;;
-;; Use the `omc-declare-message-parser' to define rules for parsing messages.
+;; Use the `cm-declare-message-parser' to define rules for parsing messages.
 
 ;;; Code:
 
@@ -41,47 +41,47 @@
 (require 'cl-lib)
 (autoload 'ido-read-directory-name "ido")
 
-(defgroup org-mail-capture nil
+(defgroup capture-mail nil
   "Utilities for capturing emails with org-mode."
   :group 'org
-  :prefix "omc--")
+  :prefix "cm--")
 
-(defcustom omc-default-parser (list :type 'other
+(defcustom cm-default-parser (list :type 'other
                                     :parser 'ignore
                                     :handler 'ignore)
   "The default parser to use if other parsers fail."
-  :group 'org-mail-capture
+  :group 'capture-mail
   :type 'function)
 
-(defcustom omc-archived-messages-dir (--first
+(defcustom cm-archived-messages-dir (--first
                                       (not (s-starts-with? "." (f-filename it)))
                                       (f-directories (f-expand "~/Maildir/")))
   "The path to move messages to once they've been processed."
-  :group 'org-mail-capture
+  :group 'capture-mail
   :type 'directory)
 
 ;; --------------------------- Internal -----------------------------------------
 
-(defvar omc--parsers nil
+(defvar cm--parsers nil
   "Contains all the parsers and handlers.
 Each element is a list of (TYPE PARSER HANDLER).")
 
 ;;; Message parsing
 
-(defun omc--message-header-value (header msg)
+(defun cm--message-header-value (header msg)
   (cadr (s-match (eval `(rx bol ,header ":" (* space) (group (* nonl)))) msg)))
 
-(defun omc--multipart-message? (msg)
-  (-when-let (s (omc--message-header-value "content-type" msg))
+(defun cm--multipart-message? (msg)
+  (-when-let (s (cm--message-header-value "content-type" msg))
     (s-matches? "multipart/alternative" s)))
 
-(defun omc--split-message-head-and-body (msg)
+(defun cm--split-message-head-and-body (msg)
   (let ((eoh (s-index-of "\n\n" msg)))
     (cons (substring-no-properties (substring msg 0 eoh))
           (substring-no-properties (substring msg eoh)))))
 
-(defun omc--multipart-body-plaintext-section (msg)
-  (cl-destructuring-bind (head . body) (omc--split-message-head-and-body msg)
+(defun cm--multipart-body-plaintext-section (msg)
+  (cl-destructuring-bind (head . body) (cm--split-message-head-and-body msg)
     (->> body
       ;; Split the body by the boundary specified in the header and select
       ;; the section with plaintext MIME encoding.
@@ -99,7 +99,7 @@ Each element is a list of (TYPE PARSER HANDLER).")
       ;; (s-replace "=0A" "")
       )))
 
-(defun omc--message-header->alist (hd)
+(defun cm--message-header->alist (hd)
   "Parse the given message header HD to an alist representation."
   (->> hd
     (s-match-strings-all (rx bol
@@ -110,18 +110,18 @@ Each element is a list of (TYPE PARSER HANDLER).")
        (cons (intern (s-downcase key))
              (substring-no-properties val))))))
 
-(defun omc--message->alist (message-str)
+(defun cm--message->alist (message-str)
   "Convert the MESSAGE-STR as a string to an alist."
-  (let* ((head-and-bod (omc--split-message-head-and-body message-str))
-         (body (s-trim (if (omc--multipart-message? message-str)
-                           (omc--multipart-body-plaintext-section message-str)
+  (let* ((head-and-bod (cm--split-message-head-and-body message-str))
+         (body (s-trim (if (cm--multipart-message? message-str)
+                           (cm--multipart-body-plaintext-section message-str)
                          (cdr head-and-bod)))))
     (cons (cons 'body body)
-          (omc--message-header->alist (car head-and-bod)))))
+          (cm--message-header->alist (car head-and-bod)))))
 
 ;;; Run parsers
 
-(defun omc--validate-parser-spec (plist)
+(defun cm--validate-parser-spec (plist)
   "Assert that PLIST is a well-formed parser specification."
   (cl-assert (plist-get plist :type) t)
   (cl-assert (plist-get plist :parser) t)
@@ -129,43 +129,43 @@ Each element is a list of (TYPE PARSER HANDLER).")
   (cl-assert (plist-get plist :handler) t)
   (cl-assert (functionp (plist-get plist :handler)) t))
 
-(defun omc--run-parsers (message parsers)
+(defun cm--run-parsers (message parsers)
   "Run each parser over the given message until one succeeds.
 Return a cons of the type and the parsed value.
 
 MESSAGE is an alist of ([HEADERS...] BODY).
 
 PARSERS is an alist of (TYPE PARSER HANDLER)."
-  (-each parsers 'omc--validate-parser-spec)
+  (-each parsers 'cm--validate-parser-spec)
   (cl-loop
-   with alist = (omc--message->alist message)
+   with alist = (cm--message->alist message)
    for p in parsers do
    (cl-destructuring-bind (&key type parser handler) p
      (-when-let (parsed-val (funcall parser alist))
        (cl-return (cons type (funcall handler parsed-val)))))))
 
-(cl-defun omc--remove-message (filepath)
+(cl-defun cm--remove-message (filepath)
   "Mark the message at FILEPATH as read
 In accordance with maildir conventions, this renames the message
 at FILEPATH and moves it to the cur dir."
-  (cl-assert (f-exists? omc-archived-messages-dir))
+  (cl-assert (f-exists? cm-archived-messages-dir))
   (when (f-exists? filepath)
     (let* ((dest-file (format "%s:2,S" (car (s-split ":" (f-filename filepath)))))
-           (dest-filepath (f-join omc-archived-messages-dir "cur" dest-file)))
+           (dest-filepath (f-join cm-archived-messages-dir "cur" dest-file)))
       (ignore-errors
         (f-move filepath dest-filepath)))))
 
-(defun omc--capture (files)
+(defun cm--capture (files)
   "Parse and capture each of the given FILES."
-  (let ((parsers (-concat omc--parsers (list omc-default-parser))))
+  (let ((parsers (-concat cm--parsers (list cm-default-parser))))
     (--each files
-      (if (omc--run-parsers (f-read-text it) parsers)
-          (omc--remove-message it)
+      (if (cm--run-parsers (f-read-text it) parsers)
+          (cm--remove-message it)
         (warn "Failed to parse: %s" it)))))
 
 ;; ------------------------- Public Interface ----------------------------------
 
-(cl-defun omc-declare-message-parser (type &key parser handler)
+(cl-defun cm-declare-message-parser (type &key parser handler)
   "Declare a maildir message parser.
 
 TYPE is a symbol that identifies the type of the parsed message.
@@ -180,30 +180,30 @@ and performs an arbitrary action."
   (cl-assert (symbolp type))
   (cl-assert (and parser (functionp parser)))
   (cl-assert (and handler (functionp handler)))
-  (setq omc--parsers (--remove (equal type (car it)) omc--parsers))
-  (add-to-list 'omc--parsers
+  (setq cm--parsers (--remove (equal type (car it)) cm--parsers))
+  (add-to-list 'cm--parsers
                (list :type type
                      :parser parser
                      :handler handler)))
 
-(defun org-mail-capture (directory)
+(defun capture-mail (directory)
   "Capture all messages in DIRECTORY.
-Add parsers using `omc-declare-message-parser' to define what
+Add parsers using `cm-declare-message-parser' to define what
 happens when messages are parsed."
   (interactive (ido-read-directory-name))
-  (omc--capture (f-files directory)))
+  (cm--capture (f-files directory)))
 
 ;;; Parser utilities
 
-(defun omc-value (prop msg)
+(defun cm-value (prop msg)
   "Get the value of property PROP from message MSG.
 Return nil if prop is not found."
   (cdr (assoc prop msg)))
 
-(defun omc-matches? (regexp prop msg)
+(defun cm-matches? (regexp prop msg)
   "Test whether the value of a property in a message matches a regexp."
-  (s-matches? regexp (omc-value prop msg)))
+  (s-matches? regexp (cm-value prop msg)))
 
-(provide 'org-mail-capture)
+(provide 'capture-mail)
 
-;;; org-mail-capture.el ends here
+;;; capture-mail.el ends here
