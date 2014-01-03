@@ -178,6 +178,13 @@ and performs an arbitrary action."
                      :parser parser
                      :handler handler)))
 
+(defun org-mail-capture (directory)
+  "Capture all messages in DIRECTORY.
+Add parsers using `omc-declare-message-parser' to define what
+happens when messages are parsed."
+  (interactive (ido-read-directory-name))
+  (omc--capture (f-files directory)))
+
 ;;; Parser utilities
 
 (defun omc-value (prop msg)
