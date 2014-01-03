@@ -29,7 +29,9 @@
 
 (require 'dash)
 (require 's)
+(require 'f)
 (require 'cl-lib)
+(autoload 'ido-read-directory-name "ido")
 
 (defgroup org-mail-capture nil
   "Utilities for capturing emails with org-mode."
@@ -38,10 +40,17 @@
 
 (defcustom omc-default-parser (list :type 'other
                                     :parser 'ignore
-                                    :handler :ignore)
+                                    :handler 'ignore)
   "The default parser to use if other parsers fail."
   :group 'org-mail-capture
   :type 'function)
+
+(defcustom omc-archived-messages-dir (--first
+                                      (not (s-starts-with? "." (f-filename it)))
+                                      (f-directories (f-expand "~/Maildir/")))
+  "The path to move messages to once they've been processed."
+  :group 'org-mail-capture
+  :type 'directory)
 
 ;; --------------------------- Internal -----------------------------------------
 
@@ -127,11 +136,24 @@ PARSERS is an alist of (TYPE PARSER HANDLER)."
      (-when-let (parsed-val (funcall parser alist))
        (cl-return (cons type (funcall handler parsed-val)))))))
 
+(cl-defun omc--remove-message (filepath)
+  "Mark the message at FILEPATH as read
+In accordance with maildir conventions, this renames the message
+at FILEPATH and moves it to the cur dir."
+  (cl-assert (f-exists? omc-archived-messages-dir))
+  (when (f-exists? filepath)
+    (let* ((dest-file (format "%s:2,S" (car (s-split ":" (f-filename filepath)))))
+           (dest-filepath (f-join omc-archived-messages-dir "cur" dest-file)))
+      (ignore-errors
+        (f-move filepath dest-filepath)))))
+
 (defun omc--capture (files)
   "Parse and capture each of the given FILES."
   (let ((parsers (-concat omc--parsers (list omc-default-parser))))
     (--each files
-      (omc--run-parsers (f-read-text it) parsers))))
+      (if (omc--run-parsers (f-read-text it) parsers)
+          (omc--remove-message it)
+        (warn "Failed to parse: %s" it)))))
 
 ;; ------------------------- Public Interface ----------------------------------
 
