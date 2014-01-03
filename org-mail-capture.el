@@ -24,6 +24,14 @@
 
 ;; Defines utilities for parsing emails in your maildir and capturing them with
 ;; org-mode.
+;;
+;; The `org-mail-capture' command will prompt you for a directory to import. You
+;; might like to run this on a timer to continually capture items, e.g.
+;;
+;;   (run-with-timer 2 60
+;;     (lambda () (org-mail-capture "~/Maildir/my-account/dir/new")))
+;;
+;; Use the `omc-declare-message-parser' to define rules for parsing messages.
 
 ;;; Code:
 
