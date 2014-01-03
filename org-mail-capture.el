@@ -113,10 +113,17 @@ MESSAGE is an alist of ([HEADERS...] BODY).
 
 PARSERS is an alist of (TYPE PARSER HANDLER)."
   (-each parsers 'omc--validate-parser-spec)
-  (cl-loop for p in parsers do
-           (cl-destructuring-bind (&key type parser handler) p
-             (-when-let (parsed-val (funcall parser message))
-               (cl-return (cons type (funcall handler parsed-val)))))))
+  (cl-loop
+   with alist = (omc--message->alist message)
+   for p in parsers do
+   (cl-destructuring-bind (&key type parser handler) p
+     (-when-let (parsed-val (funcall parser alist))
+       (cl-return (cons type (funcall handler parsed-val)))))))
+
+(defun omc--capture (files)
+  "Parse and capture each of the given FILES."
+  (--each files
+    (omc--run-parsers (f-read-text it) omc--parsers)))
 
 ;; ------------------------- Public Interface ----------------------------------
 
@@ -140,6 +147,17 @@ and performs an arbitrary action."
                (list :type type
                      :parser parser
                      :handler handler)))
+
+;;; Parser utilities
+
+(defun omc-value (prop msg)
+  "Get the value of property PROP from message MSG.
+Return nil if prop is not found."
+  (cdr (assoc prop msg)))
+
+(defun omc-matches? (regexp prop msg)
+  "Test whether the value of a property in a message matches a regexp."
+  (s-matches? regexp (omc-value prop msg)))
 
 (provide 'org-mail-capture)
 

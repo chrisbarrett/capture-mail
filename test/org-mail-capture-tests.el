@@ -27,9 +27,11 @@
 
 (require 'ert)
 
+(defvar example-message "h1: 1\nh2: 2\n\nBody")
+
 (ert-deftest successful-parse-has-type-in-car ()
   (cl-destructuring-bind (type . _)
-      (omc--run-parsers t
+      (omc--run-parsers example-message
                         '((:type success
                                  :parser (lambda (msg) t)
                                  :handler (lambda (it) t))))
@@ -37,15 +39,15 @@
 
 (ert-deftest successful-parse-has-result-in-cdr ()
   (cl-destructuring-bind (_ . parsed)
-      (omc--run-parsers '(:body "success")
+      (omc--run-parsers example-message
                         '((:type type
-                                 :parser (lambda (msg) (plist-get msg :body))
+                                 :parser (lambda (msg) (cdr (assoc 'body msg)))
                                  :handler identity)))
-    (should (equal "success" parsed))))
+    (should (equal "Body" parsed))))
 
 (ert-deftest returns-first-successful-parse-result ()
   (cl-destructuring-bind (type . _)
-      (omc--run-parsers t
+      (omc--run-parsers example-message
                         '((:type a :parser (lambda (_) nil) :handler identity)
                           (:type b :parser identity :handler identity)
                           (:type c :parser identity :handler identity)))
