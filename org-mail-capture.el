@@ -36,6 +36,13 @@
   :group 'org
   :prefix "omc--")
 
+(defcustom omc-default-parser (list :type 'other
+                                    :parser 'ignore
+                                    :handler :ignore)
+  "The default parser to use if other parsers fail."
+  :group 'org-mail-capture
+  :type 'function)
+
 ;; --------------------------- Internal -----------------------------------------
 
 (defvar omc--parsers nil
@@ -122,8 +129,9 @@ PARSERS is an alist of (TYPE PARSER HANDLER)."
 
 (defun omc--capture (files)
   "Parse and capture each of the given FILES."
-  (--each files
-    (omc--run-parsers (f-read-text it) omc--parsers)))
+  (let ((parsers (-concat omc--parsers (list omc-default-parser))))
+    (--each files
+      (omc--run-parsers (f-read-text it) parsers))))
 
 ;; ------------------------- Public Interface ----------------------------------
 
