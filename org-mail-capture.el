@@ -115,11 +115,11 @@ Each element is a list of (TYPE PARSER HANDLER).")
 
 (defun omc--validate-parser-spec (plist)
   "Assert that PLIST is a well-formed parser specification."
-  (cl-assert (plist-get plist :type))
-  (cl-assert (plist-get plist :parser))
-  (cl-assert (functionp (plist-get plist :parser)))
-  (cl-assert (plist-get plist :handler))
-  (cl-assert (functionp (plist-get plist :handler))))
+  (cl-assert (plist-get plist :type) t)
+  (cl-assert (plist-get plist :parser) t)
+  (cl-assert (functionp (plist-get plist :parser)) t)
+  (cl-assert (plist-get plist :handler) t)
+  (cl-assert (functionp (plist-get plist :handler)) t))
 
 (defun omc--run-parsers (message parsers)
   "Run each parser over the given message until one succeeds.
