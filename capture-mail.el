@@ -165,6 +165,7 @@ at FILEPATH and moves it to the cur dir."
 
 ;; ------------------------- Public Interface ----------------------------------
 
+;;;###autoload
 (cl-defun cm-declare-message-parser (type &key parser handler)
   "Declare a maildir message parser.
 
@@ -186,6 +187,7 @@ and performs an arbitrary action."
                      :parser parser
                      :handler handler)))
 
+;;;###autoload
 (defun capture-mail (directory)
   "Capture all messages in DIRECTORY.
 Add parsers using `cm-declare-message-parser' to define what
