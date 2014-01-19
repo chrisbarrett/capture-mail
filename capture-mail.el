@@ -35,6 +35,12 @@
 
 ;;; Code:
 
+(eval-and-compile
+  ;; Add cask packages to load path so flycheck checkers work.
+  (when (boundp 'flycheck-emacs-lisp-load-path)
+    (dolist (it (file-expand-wildcards "./.cask/*/elpa/*"))
+      (add-to-list 'flycheck-emacs-lisp-load-path it))))
+
 (require 'dash)
 (require 's)
 (require 'f)
@@ -86,7 +92,7 @@ Each element is a list of (TYPE PARSER HANDLER).")
       ;; Split the body by the boundary specified in the header and select
       ;; the section with plaintext MIME encoding.
       (s-split (cadr (s-match (rx "boundary=" (group (* nonl))) head)))
-      (-first (~ s-contains? "text/plain"))
+      (--first (s-contains? "text/plain" it))
       ;; Tidy the section, dropping headers.
       s-trim
       (s-chop-suffix "--")
