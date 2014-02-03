@@ -198,7 +198,7 @@ and performs an arbitrary action."
   "Capture all messages in DIRECTORY.
 Add parsers using `cm-declare-message-parser' to define what
 happens when messages are parsed."
-  (interactive (ido-read-directory-name))
+  (interactive (ido-read-directory-name "Capture mail in: " nil nil t))
   (cm--capture (f-files directory)))
 
 ;;; Parser utilities
