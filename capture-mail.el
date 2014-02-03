@@ -61,7 +61,7 @@
 
 (defcustom cm-archived-messages-dir (--first
                                       (not (s-starts-with? "." (f-filename it)))
-                                      (f-directories (f-expand "~/Maildir/")))
+                                      (f-directories (f-expand "~/Mail/")))
   "The path to move messages to once they've been processed."
   :group 'capture-mail
   :type 'directory)
@@ -75,18 +75,22 @@ Each element is a list of (TYPE PARSER HANDLER).")
 ;;; Message parsing
 
 (defun cm--message-header-value (header msg)
+  "Find the value for HEADER in MSG."
   (cadr (s-match (eval `(rx bol ,header ":" (* space) (group (* nonl)))) msg)))
 
 (defun cm--multipart-message? (msg)
+  "Non-nil if MSG is a multipart message."
   (-when-let (s (cm--message-header-value "content-type" msg))
     (s-matches? "multipart/alternative" s)))
 
 (defun cm--split-message-head-and-body (msg)
+  "Split MSG into a cons of (header . body)."
   (let ((eoh (s-index-of "\n\n" msg)))
     (cons (substring-no-properties (substring msg 0 eoh))
           (substring-no-properties (substring msg eoh)))))
 
 (defun cm--multipart-body-plaintext-section (msg)
+  "Parse a multipart-encoded message MSG and return the plaintext body section."
   (cl-destructuring-bind (head . body) (cm--split-message-head-and-body msg)
     (->> body
       ;; Split the body by the boundary specified in the header and select
