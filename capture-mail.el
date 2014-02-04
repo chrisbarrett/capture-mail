@@ -53,8 +53,8 @@
   :prefix "cm--")
 
 (defcustom cm-default-parser (list :type 'other
-                                    :parser 'ignore
-                                    :handler 'ignore)
+                                   :parser 'ignore
+                                   :handler 'ignore)
   "The default parser to use if other parsers fail."
   :group 'capture-mail
   :type 'function)
