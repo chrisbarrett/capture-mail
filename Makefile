@@ -1,5 +1,4 @@
 CWD          = $(shell pwd)
-DOC          = $(CWD)/doc
 SCRIPT       = $(CWD)/script
 GIT_DIR      = $(CWD)/.git
 EMACS       ?= emacs
@@ -15,17 +14,14 @@ USER_ELPA_D  = $(USER_EMACS_D)/elpa
 SRCS         = $(filter-out %-pkg.el, $(wildcard *.el))
 TESTS        = $(filter-out %-pkg.el, $(wildcard test/*.el))
 OBJECTS      = $(SRCS:.el=.elc)
-DOC_ORG      = $(DOC)/capture-mail.org
-DOC_TEXI     = $(DOC)/capture-mail.texi
-INFO_MANUAL  = $(DOC)/capture-mail.info
-PACKAGE_SRCS = $(SRCS) capture-mail-pkg.el $(INFO_MANUAL)
+PACKAGE_SRCS = $(SRCS) capture-mail-pkg.el
 PACKAGE_TAR  = capture-mail-$(VERSION).tar
 
 PRECOMMIT_SRC  = $(SCRIPT)/pre-commit.sh
 PRECOMMIT_HOOK = $(GIT_DIR)/hooks/pre-commit
 
 .PHONY: all
-all : env compile info dist
+all : env compile dist
 
 # Configure tooling and environment.
 .PHONY: env
@@ -47,14 +43,6 @@ check : compile
 	$(patsubst %,-l % , $(SRCS))\
 	$(patsubst %,-l % , $(TESTS))\
 	-f ert-run-tests-batch-and-exit
-
-# Export the org documentation to an info manual.
-.PHONY: info
-info : $(INFO_MANUAL)
-$(INFO_MANUAL) : $(DOC_ORG)
-	$(CASK) exec $(EMACS) $(EMACSFLAGS) \
-	-l org -l ox-texinfo \
-	--file=$(DOC_ORG) -f org-texinfo-export-to-info
 
 # Install packages with Cask.
 $(PKG_DIR) : Cask
@@ -93,11 +81,9 @@ clean-all : clean clean-pkgdir
 
 # Clean generated files.
 .PHONY: clean
-clean : $(clean-doc)
+clean :
 	rm -f $(OBJECTS)
 	rm -rf capture-mail-*.tar capture-mail-pkg.el
-	rm -f $(DOC_TEXI)
-	rm -f $(INFO_MANUAL)
 
 # Remove packages installed by Cask.
 .PHONY: clean-pkgdir
