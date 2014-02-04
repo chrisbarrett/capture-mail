@@ -157,11 +157,11 @@ PARSERS is a plist of (TYPE PARSER HANDLER PREDICATE)."
   "Mark the message at FILEPATH as read
 In accordance with maildir conventions, this renames the message
 at FILEPATH and moves it to the cur dir."
-  (cl-assert (f-exists? cm-archived-messages-dir))
+  (cl-assert (f-directory? cm-archived-messages-dir))
   (when (f-exists? filepath)
     (let* ((dest-file (format "%s:2,S" (car (s-split ":" (f-filename filepath)))))
-           (dest-filepath (f-join cm-archived-messages-dir "cur" dest-file)))
-      (ignore-errors
+           (dest-filepath (f-join cm-archived-messages-dir dest-file)))
+      (with-demoted-errors
         (f-move filepath dest-filepath)))))
 
 (defun cm--capture (files)
@@ -206,6 +206,8 @@ and performs an arbitrary action."
 Add parsers using `cm-declare-message-parser' to define what
 happens when messages are parsed."
   (interactive (ido-read-directory-name "Capture mail in: " nil nil t))
+  (cl-assert (f-directory? directory))
+  (cl-assert (f-directory? cm-archived-messages-dir))
   (cm--capture (f-files directory)))
 
 ;;; Parser utilities
