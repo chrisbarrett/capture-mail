@@ -59,9 +59,7 @@
   :group 'capture-mail
   :type 'function)
 
-(defcustom cm-archived-messages-dir (--first
-                                      (not (s-starts-with? "." (f-filename it)))
-                                      (f-directories (f-expand "~/Mail/")))
+(defcustom cm-archived-messages-dir nil
   "The path to move messages to once they've been processed."
   :group 'capture-mail
   :type 'directory)
