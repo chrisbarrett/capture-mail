@@ -145,14 +145,15 @@ Return a cons of the type and the parsed value.
 
 MESSAGE is an alist of ([HEADERS...] BODY).
 
-PARSERS is an alist of (TYPE PARSER HANDLER)."
+PARSERS is a plist of (TYPE PARSER HANDLER PREDICATE)."
   (-each parsers 'cm--validate-parser-spec)
   (cl-loop
    with alist = (cm--message->alist message)
    for p in parsers do
-   (cl-destructuring-bind (&key type parser handler) p
-     (-when-let (parsed-val (funcall parser alist))
-       (cl-return (cons type (funcall handler parsed-val)))))))
+   (cl-destructuring-bind (&key type predicate parser handler) p
+     (when (funcall predicate alist)
+       (let ((parsed-val (funcall parser alist)))
+         (cl-return (cons type (funcall handler parsed-val))))))))
 
 (cl-defun cm--remove-message (filepath)
   "Mark the message at FILEPATH as read
@@ -176,24 +177,28 @@ at FILEPATH and moves it to the cur dir."
 ;; ------------------------- Public Interface ----------------------------------
 
 ;;;###autoload
-(cl-defun cm-declare-message-parser (type &key parser handler)
+(cl-defun cm-declare-message-parser (type &key predicate parser handler)
   "Declare a maildir message parser.
 
 TYPE is a symbol that identifies the type of the parsed message.
 
-PARSER is a function that takes an alist of ([HEADERS...] BODY).
-It should return the value needed by the HANDLER command if
-parsing succeeds, or nil if parsing fails.
+PREDICATE is a function taking an alist of ([HEADERS...] BODY),
+returning non-nil if this message will be accepted by the parser.
+
+PARSER is a function taking an alist of ([HEADERS...] BODY) and
+returning the result used by the HANDLER command.
 
 HANDLER is a command that takes a value returned by the parser
 and performs an arbitrary action."
   (declare (indent 1))
   (cl-assert (symbolp type))
+  (cl-assert (and predicate (functionp predicate)))
   (cl-assert (and parser (functionp parser)))
   (cl-assert (and handler (functionp handler)))
   (setq cm--parsers (--remove (equal type (car it)) cm--parsers))
   (add-to-list 'cm--parsers
                (list :type type
+                     :predicate predicate
                      :parser parser
                      :handler handler)))
 

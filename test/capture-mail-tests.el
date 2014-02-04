@@ -33,24 +33,26 @@
   (cl-destructuring-bind (type . _)
       (cm--run-parsers example-message
                        '((:type success
-                                :parser (lambda (msg) t)
-                                :handler (lambda (it) t))))
+                                :predicate (lambda (_) t)
+                                :parser identity
+                                :handler identity)))
     (should (equal 'success type))))
 
 (ert-deftest successful-parse-has-result-in-cdr ()
   (cl-destructuring-bind (_ . parsed)
       (cm--run-parsers example-message
                        '((:type type
+                                :predicate (lambda (_) t)
                                 :parser (lambda (msg) (cdr (assoc 'body msg)))
                                 :handler identity)))
     (should (equal "Body" parsed))))
 
-(ert-deftest returns-first-successful-parse-result ()
+(ert-deftest uses-first-parser-where-predicate-returns-non-nil ()
   (cl-destructuring-bind (type . _)
       (cm--run-parsers example-message
-                       '((:type a :parser (lambda (_) nil) :handler identity)
-                         (:type b :parser identity :handler identity)
-                         (:type c :parser identity :handler identity)))
+                       '((:type a :parser identity :handler identity :predicate (lambda (_) nil))
+                         (:type b :parser identity :handler identity :predicate (lambda (_) t))
+                         (:type c :parser identity :handler identity :predicate (lambda (_) t))))
     (should (equal 'b type))))
 
 (ert-deftest parses-message-to-alist ()
