@@ -54,6 +54,7 @@
 
 (defcustom cm-default-parser (list :type 'other
                                    :parser 'ignore
+                                   :predicate 'ignore
                                    :handler 'ignore)
   "The default parser to use if other parsers fail."
   :group 'capture-mail
