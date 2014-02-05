@@ -65,6 +65,11 @@
   :group 'capture-mail
   :type 'directory)
 
+(defcustom cm-capture-messages-dir nil
+  "The default path for capturing messages."
+  :group 'capture-mail
+  :type 'directory)
+
 ;; --------------------------- Internal -----------------------------------------
 
 (defvar cm--parsers nil
@@ -206,7 +211,8 @@ and performs an arbitrary action."
   "Capture all messages in DIRECTORY.
 Add parsers using `cm-declare-message-parser' to define what
 happens when messages are parsed."
-  (interactive (ido-read-directory-name "Capture mail in: " nil nil t))
+  (interactive (list (ido-read-directory-name "Capture mail in: "
+                                              cm-capture-messages-dir nil t)))
   (cl-assert (f-directory? directory))
   (cl-assert (f-directory? cm-archived-messages-dir))
   (cm--capture (f-files directory)))
