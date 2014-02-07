@@ -171,12 +171,18 @@ at FILEPATH and moves it to the cur dir."
         (f-move filepath dest-filepath)))))
 
 (defun cm--capture (files)
-  "Parse and capture each of the given FILES."
-  (let ((parsers (-concat cm--parsers (list cm-default-parser))))
-    (--each files
-      (if (cm--run-parsers (f-read-text it) parsers)
-          (cm--remove-message it)
-        (warn "Failed to parse: %s" it)))))
+  "Parse and capture each of the given FILES.
+Return the files that were parsed successfully."
+  (cl-loop
+   with parsers = (-concat cm--parsers (list cm-default-parser))
+   for f in files
+   for parsed? = nil
+   do (cond ((cm--run-parsers (f-read-text f) parsers)
+             (cm--remove-message f)
+             (setq parsed? t))
+            (t
+             (warn "Failed to parse: %s" f)))
+   if parsed? collect f))
 
 ;; ------------------------- Public Interface ----------------------------------
 
@@ -215,7 +221,24 @@ happens when messages are parsed."
                                               cm-capture-messages-dir nil t)))
   (cl-assert (f-directory? directory))
   (cl-assert (f-directory? cm-archived-messages-dir))
-  (cm--capture (f-files directory)))
+  (let* ((fs (f-files directory))
+         (n (length (cm--capture fs))))
+
+    (when (called-interactively-p nil)
+      (cond
+       ((/= (length fs) n)
+        (let ((m (length fs)))
+          (message "Captured %s file%s, but failed to parse %s file%s"
+                   n
+                   (if (= 1 n) "" "s")
+                   (- m n)
+                   (if (= 1 m) "" "s"))))
+       ((zerop n)
+        (message "No files to capture"))
+       ((equal 1 n)
+        (message "Captured 1 file"))
+       (t
+        (message "Captured %s files" n))))))
 
 ;;; Parser utilities
 
