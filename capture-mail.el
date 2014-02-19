@@ -179,7 +179,7 @@ at FILEPATH and moves it to the cur dir."
     (let* ((dest-file (format "%s:2,S" (car (s-split ":" (f-filename filepath)))))
            (dest-filepath (f-join cm-archived-messages-dir dest-file)))
       (with-demoted-errors
-        (f-move filepath dest-filepath)))))
+          (f-move filepath dest-filepath)))))
 
 (defun cm--capture (files)
   "Parse and capture each of the given FILES.
