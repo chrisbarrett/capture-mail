@@ -143,9 +143,11 @@ Each element is a list of (TYPE PARSER HANDLER).")
   (cl-assert (plist-get plist :handler) t)
   (cl-assert (functionp (plist-get plist :handler)) t))
 
-(defun cm--run-parsers (message parsers)
+(defun cm--run-parsers (filepath message parsers)
   "Run each parser over the given message until one succeeds.
 Return a cons of the type and the parsed value.
+
+FILEPATH is the message location, for error reporting.
 
 MESSAGE is an alist of ([HEADERS...] BODY).
 
@@ -155,7 +157,8 @@ PARSERS is a plist of (TYPE PARSER HANDLER PREDICATE)."
    with alist = (condition-case-unless-debug _
                     (cm--message->alist message)
                   (error
-                   (error "Failed to parse message header")))
+                   (error "%s: Failed to parse message header"
+                          (f-short filepath))))
    for p in parsers do
    (cl-destructuring-bind (&key type predicate parser handler) p
      (when (funcall predicate alist)
@@ -167,7 +170,7 @@ PARSERS is a plist of (TYPE PARSER HANDLER PREDICATE)."
                (let ((text (cdr (assoc 'body alist))))
                  (display-warning
                   'capture-mail
-                  (format "Error parsing message: \n\n%s" text))))))
+                  (format "%s: Error parsing message" (f-short filepath)))))))
          (cl-return (cons type (funcall handler parsed-val))))))))
 
 (cl-defun cm--remove-message (filepath)
@@ -188,7 +191,7 @@ Return the files that were parsed successfully."
    with parsers = (-concat cm--parsers (list cm-default-parser))
    for f in files
    for parsed? = nil
-   do (cond ((cm--run-parsers (f-read-text f) parsers)
+   do (cond ((cm--run-parsers f (f-read-text f) parsers)
              (cm--remove-message f)
              (setq parsed? t))
             (t
