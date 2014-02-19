@@ -152,11 +152,22 @@ MESSAGE is an alist of ([HEADERS...] BODY).
 PARSERS is a plist of (TYPE PARSER HANDLER PREDICATE)."
   (-each parsers 'cm--validate-parser-spec)
   (cl-loop
-   with alist = (cm--message->alist message)
+   with alist = (condition-case-unless-debug _
+                    (cm--message->alist message)
+                  (error
+                   (error "Failed to parse message header")))
    for p in parsers do
    (cl-destructuring-bind (&key type predicate parser handler) p
      (when (funcall predicate alist)
-       (let ((parsed-val (funcall parser alist)))
+       (-when-let
+           (parsed-val
+            (condition-case-unless-debug _
+                (funcall parser alist)
+              (error
+               (let ((text (cdr (assoc 'body alist))))
+                 (display-warning
+                  'capture-mail
+                  (format "Error parsing message: \n\n%s" text))))))
          (cl-return (cons type (funcall handler parsed-val))))))))
 
 (cl-defun cm--remove-message (filepath)
