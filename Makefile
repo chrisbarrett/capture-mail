@@ -75,6 +75,9 @@ install : dist
 uninstall :
 	rm -rf $(USER_ELPA_D)/capture-mail-*
 
+.PHONY: reinstall
+reinstall : clean uninstall install
+
 # Restore to pristine state.
 .PHONY: clean-all
 clean-all : clean clean-pkgdir
