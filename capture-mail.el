@@ -185,7 +185,8 @@ Return the files that were parsed successfully."
    with parsers = (-concat cm--parsers (list cm-default-parser))
    for f in files
    for parsed? = nil
-   do (cond ((cm--run-parsers f (f-read-text f) parsers)
+   do (cond ((ignore-errors
+               (cm--run-parsers f (f-read-text f) parsers))
              (cm--remove-message f)
              (setq parsed? t))
             (t
